@@ -30,13 +30,13 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
           if echo "$PR_TITLE" | grep -qiE '^major:'; then
-            echo "type=major" >> $GITHUB_OUTPUT
+            echo "type=major" >> "$GITHUB_OUTPUT"
           elif echo "$PR_TITLE" | grep -qiE '^minor:'; then
-            echo "type=minor" >> $GITHUB_OUTPUT
+            echo "type=minor" >> "$GITHUB_OUTPUT"
           elif echo "$PR_TITLE" | grep -qiE '^patch:'; then
-            echo "type=patch" >> $GITHUB_OUTPUT
+            echo "type=patch" >> "$GITHUB_OUTPUT"
           else
-            echo "type=patch" >> $GITHUB_OUTPUT
+            echo "type=patch" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Compute next version
@@ -44,6 +44,8 @@ jobs:
         env:
           BUMP_TYPE: ${{ steps.bump.outputs.type }}
         run: |
+          set -euo pipefail
+
           CURRENT_VERSION=$(tr -d ' \n\r\t' < VERSION)
           if ! echo "$CURRENT_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "VERSION must be X.Y.Z. Found: '$CURRENT_VERSION'"
@@ -59,7 +61,7 @@ jobs:
             *) echo "Unknown bump type: $BUMP_TYPE"; exit 1 ;;
           esac
 
-          echo "new_version=${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
+          echo "new_version=${MAJOR}.${MINOR}.${PATCH}" >> "$GITHUB_OUTPUT"
 
       - name: Create release branch + commit VERSION/CHANGELOG
         env:
@@ -73,19 +75,35 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
+          # Ensure local view of remote refs
+          git fetch origin --prune
+
+          # Delete remote branch if it exists (safe for reruns)
+          git push origin --delete "$BRANCH" 2>/dev/null || true
+
+          # Create the branch locally from current main
           git switch -c "$BRANCH"
 
+          # This script uses PR_BODY and NEW_VERSION from env
           scripts/make_release_commit.sh
 
+          # Push the branch
           git push -u origin "$BRANCH"
 
-      - name: Open release PR
+      - name: Open release PR (idempotent)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_VERSION: ${{ steps.ver.outputs.new_version }}
         run: |
           set -euo pipefail
+
           BRANCH="release/v${NEW_VERSION}"
+
+          # If a PR already exists for this branch, don't fail on rerun
+          if gh pr view "$BRANCH" --json number >/dev/null 2>&1; then
+            echo "Release PR already exists for $BRANCH"
+            exit 0
+          fi
 
           gh pr create \
             --base main \
