@@ -1,0 +1,45 @@
+name: Version + Changelog + Tag on PR Merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  version-repo:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Determine bump type from PR title
+        id: bump
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          echo "PR title: $PR_TITLE"
+
+          if echo "$PR_TITLE" | grep -qiE '^major:'; then
+            echo "type=major" >> $GITHUB_OUTPUT
+          elif echo "$PR_TITLE" | grep -qiE '^minor:'; then
+            echo "type=minor" >> $GITHUB_OUTPUT
+          elif echo "$PR_TITLE" | grep -qiE '^patch:'; then
+            echo "type=patch" >> $GITHUB_OUTPUT
+          else
+            echo "type=patch" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bump VERSION, update CHANGELOG, commit, and tag
+        env:
+          BUMP_TYPE: ${{ steps.bump.outputs.type }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: scripts/version_on_pr_merge.sh

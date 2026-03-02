@@ -1,0 +1,33 @@
+name: Validate PR Title
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+
+jobs:
+  validate-pr-title:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR title prefix
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          echo "PR title: $PR_TITLE"
+
+          if echo "$PR_TITLE" | grep -qiE '^(major|minor|patch):'; then
+            echo "✅ Title is valid."
+            exit 0
+          fi
+
+          echo "❌ Invalid PR title."
+          echo
+          echo "Your PR title must start with one of:"
+          echo "  major: ..."
+          echo "  minor: ..."
+          echo "  patch: ..."
+          echo
+          echo "Examples:"
+          echo "  patch: fix off-by-one in scoring"
+          echo "  minor: add new spy action card"
+          echo "  major: redesign scoring system"
+          exit 1
