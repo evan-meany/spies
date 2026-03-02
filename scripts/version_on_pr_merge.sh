@@ -3,6 +3,8 @@ set -euo pipefail
 
 : "${BUMP_TYPE:?BUMP_TYPE env var required (major|minor|patch)}"
 : "${PR_BODY:?PR_BODY env var required}"
+: "${BOT_TOKEN:?BOT_TOKEN env var required}"
+: "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY env var required}"
 
 # --- VERSION bump ---
 if [[ ! -f VERSION ]]; then
@@ -58,5 +60,8 @@ git add VERSION CHANGELOG.md
 git commit -m "BUMP VERSION TO v$NEW_VERSION"
 git tag "v$NEW_VERSION"
 
-# Push the commit and tags in one go
+# 🔐 Use bot token for authenticated push
+git remote set-url origin "https://x-access-token:${BOT_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+# Push commit and tags
 git push origin main --tags

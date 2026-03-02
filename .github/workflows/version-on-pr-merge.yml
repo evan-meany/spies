@@ -42,4 +42,6 @@ jobs:
         env:
           BUMP_TYPE: ${{ steps.bump.outputs.type }}
           PR_BODY: ${{ github.event.pull_request.body }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: scripts/version_on_pr_merge.sh
