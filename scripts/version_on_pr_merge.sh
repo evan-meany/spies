@@ -55,7 +55,7 @@ git config user.name "github-actions"
 git config user.email "github-actions@github.com"
 
 git add VERSION CHANGELOG.md
-git commit -m "chore: bump version to v$NEW_VERSION [skip ci]"
+git commit -m "BUMP VERSION TO v$NEW_VERSION"
 git tag "v$NEW_VERSION"
 
 # Push the commit and tags in one go
