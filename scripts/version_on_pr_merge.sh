@@ -59,4 +59,4 @@ git commit -m "chore: bump version to v$NEW_VERSION [skip ci]"
 git tag "v$NEW_VERSION"
 
 # Push the commit and tags in one go
-git push origin main --follow-tags
+git push origin main --tags
