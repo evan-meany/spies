@@ -1,4 +1,4 @@
-name: Version + Changelog + Tag on PR Merge
+name: Version + Changelog PR on Merge
 
 on:
   pull_request:
@@ -7,11 +7,14 @@ on:
 
 permissions:
   contents: write
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   version-repo:
-    if: github.event.pull_request.merged == true
+    # Run only for merged PRs, and skip the auto-release PR to prevent loops
+    if: >
+      github.event.pull_request.merged == true &&
+      !startsWith(github.event.pull_request.title, 'patch: release v')
     runs-on: ubuntu-latest
 
     steps:
@@ -26,8 +29,6 @@ jobs:
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          echo "PR title: $PR_TITLE"
-
           if echo "$PR_TITLE" | grep -qiE '^major:'; then
             echo "type=major" >> $GITHUB_OUTPUT
           elif echo "$PR_TITLE" | grep -qiE '^minor:'; then
@@ -38,8 +39,56 @@ jobs:
             echo "type=patch" >> $GITHUB_OUTPUT
           fi
 
-      - name: Bump VERSION, update CHANGELOG, commit, and tag
+      - name: Compute next version
+        id: ver
         env:
           BUMP_TYPE: ${{ steps.bump.outputs.type }}
+        run: |
+          CURRENT_VERSION=$(tr -d ' \n\r\t' < VERSION)
+          if ! echo "$CURRENT_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "VERSION must be X.Y.Z. Found: '$CURRENT_VERSION'"
+            exit 1
+          fi
+
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+          case "$BUMP_TYPE" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+            *) echo "Unknown bump type: $BUMP_TYPE"; exit 1 ;;
+          esac
+
+          echo "new_version=${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
+
+      - name: Create release branch + commit VERSION/CHANGELOG
+        env:
+          NEW_VERSION: ${{ steps.ver.outputs.new_version }}
           PR_BODY: ${{ github.event.pull_request.body }}
-        run: scripts/version_on_pr_merge.sh
+        run: |
+          set -euo pipefail
+
+          BRANCH="release/v${NEW_VERSION}"
+
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git switch -c "$BRANCH"
+
+          scripts/make_release_commit.sh
+
+          git push -u origin "$BRANCH"
+
+      - name: Open release PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_VERSION: ${{ steps.ver.outputs.new_version }}
+        run: |
+          set -euo pipefail
+          BRANCH="release/v${NEW_VERSION}"
+
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "patch: release v${NEW_VERSION}" \
+            --body "Automated release PR: updates VERSION and CHANGELOG for v${NEW_VERSION}."
