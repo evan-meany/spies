@@ -58,7 +58,11 @@ git config user.email "github-actions@github.com"
 
 git add VERSION CHANGELOG.md
 git commit -m "BUMP VERSION TO v$NEW_VERSION"
-git tag "v$NEW_VERSION"
+
+# Only create tag if it does not exist locally OR remotely
+if ! git ls-remote --tags origin "v$NEW_VERSION" | grep -q "v$NEW_VERSION"; then
+  git tag "v$NEW_VERSION"
+fi
 
 # 🔐 Use bot token for authenticated push
 git remote set-url origin "https://x-access-token:${BOT_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
