@@ -1,4 +1,4 @@
-name: Version + Tag on PR Merge
+name: Version + Changelog + Tag on PR Merge
 
 on:
   pull_request:
@@ -28,52 +28,18 @@ jobs:
         run: |
           echo "PR title: $PR_TITLE"
 
-          # Priority: major > minor > patch
-          if echo "$PR_TITLE" | grep -qiE "^major:"; then
+          if echo "$PR_TITLE" | grep -qiE '^major:'; then
             echo "type=major" >> $GITHUB_OUTPUT
-          elif echo "$PR_TITLE" | grep -qiE "^minor:"; then
+          elif echo "$PR_TITLE" | grep -qiE '^minor:'; then
             echo "type=minor" >> $GITHUB_OUTPUT
-          elif echo "$PR_TITLE" | grep -qiE "^patch:"; then
+          elif echo "$PR_TITLE" | grep -qiE '^patch:'; then
             echo "type=patch" >> $GITHUB_OUTPUT
           else
             echo "type=patch" >> $GITHUB_OUTPUT
           fi
 
-      - name: Bump VERSION, commit, and tag
+      - name: Bump VERSION, update CHANGELOG, commit, and tag
         env:
           BUMP_TYPE: ${{ steps.bump.outputs.type }}
-        run: |
-          set -euo pipefail
-
-          if [ ! -f VERSION ]; then
-            echo "VERSION file not found at repo root."
-            exit 1
-          fi
-
-          CURRENT_VERSION=$(tr -d ' \n\r\t' < VERSION)
-
-          if ! echo "$CURRENT_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "VERSION must be in X.Y.Z format. Found: '$CURRENT_VERSION'"
-            exit 1
-          fi
-
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
-
-          case "$BUMP_TYPE" in
-            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
-            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
-            patch) PATCH=$((PATCH + 1)) ;;
-            *) echo "Unknown bump type: $BUMP_TYPE"; exit 1 ;;
-          esac
-
-          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
-          echo "$NEW_VERSION" > VERSION
-
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-
-          git add VERSION
-          git commit -m "chore: bump version to v$NEW_VERSION [skip ci]"
-
-          git tag "v$NEW_VERSION"
-          git push origin main --tags
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: scripts/version_on_pr_merge.sh
