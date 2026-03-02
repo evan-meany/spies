@@ -1,3 +1,7 @@
+## v0.0.3
+### Changed
+- Automated version commit message
+
 ## v0.0.2
 ### Changed
 - Push to push all tags (even non-annotated)
