@@ -10,7 +10,7 @@ permissions:
   pull-requests: read
 
 jobs:
-  tag:
+  version-repo:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 

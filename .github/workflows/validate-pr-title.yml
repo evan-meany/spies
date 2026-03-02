@@ -5,7 +5,7 @@ on:
     types: [opened, edited, reopened, synchronize, ready_for_review]
 
 jobs:
-  validate:
+  validate-pr-title:
     runs-on: ubuntu-latest
     steps:
       - name: Validate PR title prefix
