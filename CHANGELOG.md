@@ -1,3 +1,7 @@
+## v0.0.4
+### Changed
+- Git tagging during versioning is now idempotent
+
 ## v0.0.3
 ### Changed
 - Automated version commit message
