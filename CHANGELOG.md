@@ -1,3 +1,7 @@
+## v0.0.5
+### Added
+- Readme instructions
+
 ## v0.0.4
 ### Changed
 - Git tagging during versioning is now idempotent
