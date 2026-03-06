@@ -21,7 +21,7 @@
 //   {"type":"error","msg":"..."}
 //   {"type":"left","msg":"..."}
 
-package main
+package test
 
 import (
 	"encoding/json"
