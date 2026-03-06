@@ -13,10 +13,12 @@
 The board is divided into two halves:
 * **Player 1’s side**
 * **Player 2’s side**
+
 Each side has **three rows**:
 * Clubs Row
 * Hearts Row
 * Diamonds Row
+
 The physical order of the rows does not matter, but it should remain **consistent for both players**.
 
 # **The Cards**
